@@ -11,8 +11,8 @@ To run:
 import urllib.request
 import os
 
-# All three are 19th century English novels, on purpose: keeps the training corpus stylistically consistent.
-# Matters for Week 3, where I will test the model on something "different" and see it get worse.
+# All three are 19th century English novels, on purpose.
+# Matters because I will test the model on something "different" and see it get worse.
 
 BOOKS = { 1342: "pride_and_prejudice.txt", 84: "frankenstein.txt", 11: "alice_in_wonderland.txt" }
 
@@ -30,7 +30,8 @@ def download_book(book_id: int, filename: str) -> None:
         print(f"Skipping {filename} (already downloaded)")
         return
 
-    print(f"Donwloading {filename} from {url} ...")
+    print(f"Downloading {filename} from {url} ...")
+
     #urlretrieve fetches the URL and writes the response body straight to disk
     urllib.request.urlretrieve(url, out_path)
     print(f"    saved to {out_path}")
