@@ -9,7 +9,6 @@ To run:
 import gzip 
 import bz2
 import os
-from pathlib import Path
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 CORPUS_PATH = os.path.join(DATA_DIR, "corpus.txt")

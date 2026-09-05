@@ -28,7 +28,7 @@ def clean_gutenberg_text(text: str) -> str:
     text = text[start + 1:]
 
     end = text.find(end_marker)
-    assert end != -1, f"Start marker not found - check this book's format: {end_marker!r}"
+    assert end != -1, f"End marker not found - check this book's format: {end_marker!r}"
     text = text[:end]
 
     return text.strip()
@@ -68,12 +68,12 @@ def decode(ids: list[int], itos: dict) -> str:
 
 def save_vocab(chars: list, path: str = VOCAB_PATH) -> None:
     """Save the sorted character list - stoi.itos can be rebuilt from it."""
-    with open(path, "w", encoding = "utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(chars, f, ensure_ascii=False)
 
 def save_corpus(text: str, path: str = CORPUS_PATH) -> None:
     """Save the concatenated corpus so downstream scripts don't re-implement load_corpus()."""
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
 
 def load_vocab(path: str = VOCAB_PATH):
