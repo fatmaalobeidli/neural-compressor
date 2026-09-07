@@ -8,6 +8,7 @@ into the data/ folder, as plain UTF-8 text files.
 To run: 
     python src/download.py
 """
+
 import urllib.request
 import os
 
