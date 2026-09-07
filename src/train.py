@@ -2,18 +2,28 @@
 Train and evaluate the character-level GRU language model.
 
 Uses non-overlapping chunks of the corpus per epoch (so training/validation
-loss can be plotted against epoch number), tracks loss in both nats (native 
-to CrossEntropyLoss) and bits/char (comparable to the gzip/bzip2 numbers 
+loss can be plotted against epoch number), tracks loss in both nats (native
+to CrossEntropyLoss) and bits/char (comparable to the gzip/bzip2 numbers
 from baseline.py).
+
+Writes per-epoch metrics to results/training_log.csv, a loss curve plot to
+results/plots/training_curve.png, and (if results/baseline_metrics.json
+exists, i.e. baseline.py has already been run) a combined
+results/benchmark_table.csv comparing gzip, bzip2, and the trained model.
 
 Run from the project root:
     python src/train.py
 """
 
+import csv
+import json
 import math
 import os
 import random
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
@@ -35,6 +45,12 @@ VALIDATION_FRACTION = 0.1
 
 CHECKPOINT_DIR = os.path.join(os.path.dirname(__file__), "..", "checkpoints")
 CHECKPOINT_PATH = os.path.join(CHECKPOINT_DIR, "char_gru.pt")
+
+RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
+LOG_PATH = os.path.join(RESULTS_DIR, "training_log.csv")
+PLOT_PATH = os.path.join(RESULTS_DIR, "plots", "training_curve.png")
+BENCHMARK_PATH = os.path.join(RESULTS_DIR, "benchmark_table.csv")
+BASELINE_METRICS_PATH = os.path.join(RESULTS_DIR, "baseline_metrics.json")
 
 
 class CharacterDataset(Dataset):
@@ -106,10 +122,55 @@ def run_epoch(
     return total_loss / total_characters
 
 
+def write_plot(history: list[dict]) -> None:
+    """Plot train/val bits-per-char over epochs and save to PLOT_PATH."""
+    epochs = [row["epoch"] for row in history]
+    train_bpc = [row["train_bpc"] for row in history]
+    val_bpc = [row["val_bpc"] for row in history]
+
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.plot(epochs, train_bpc, marker="o", label="train")
+    ax.plot(epochs, val_bpc, marker="o", label="validation")
+    ax.set_xlabel("epoch")
+    ax.set_ylabel("bits / character")
+    ax.set_title("CharGRU training curve")
+    ax.set_xticks(epochs)
+    ax.legend()
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(PLOT_PATH, dpi=150)
+    plt.close(fig)
+    print(f"Saved training curve to {PLOT_PATH}")
+
+
+def write_benchmark_table(best_val_bpc: float) -> None:
+    """Combine gzip/bzip2 numbers from baseline.py (if available) with the
+    model's best validation BPC into results/benchmark_table.csv."""
+    rows = [{"method": "neural_gru (val)", "bits_per_char": best_val_bpc}]
+
+    if os.path.exists(BASELINE_METRICS_PATH):
+        with open(BASELINE_METRICS_PATH, encoding="utf-8") as f:
+            baseline = json.load(f)
+        rows.insert(0, {"method": "bzip2", "bits_per_char": baseline["bzip2_bpc"]})
+        rows.insert(0, {"method": "gzip", "bits_per_char": baseline["gzip_bpc"]})
+    else:
+        print(
+            f"Warning: {BASELINE_METRICS_PATH} not found - run baseline.py first "
+            "to include gzip/bzip2 in the benchmark table."
+        )
+
+    with open(BENCHMARK_PATH, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["method", "bits_per_char"])
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Saved benchmark table to {BENCHMARK_PATH}")
+
+
 def main() -> None:
     set_seed(SEED)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    os.makedirs(os.path.dirname(PLOT_PATH), exist_ok=True)
 
     chars, stoi, _ = load_vocab()
     with open(CORPUS_PATH, encoding="utf-8") as f:
@@ -134,41 +195,65 @@ def main() -> None:
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     best_val_loss = float("inf")
+    history = []
 
     print(f"Device: {device}")
     print(f"Corpus: {len(text):,} characters | Vocabulary: {len(chars)}")
     print(f"Training: {len(train_ids):,} | Validation: {len(val_ids):,}")
 
-    for epoch in range(1, EPOCHS + 1):
-        train_loss = run_epoch(model, train_loader, criterion, device, optimizer)
-        val_loss = run_epoch(model, val_loader, criterion, device)
+    with open(LOG_PATH, "w", newline="", encoding="utf-8") as log_file:
+        log_writer = csv.DictWriter(
+            log_file,
+            fieldnames=["epoch", "train_loss_nats", "train_bpc", "val_loss_nats", "val_bpc", "is_best"],
+        )
+        log_writer.writeheader()
 
-        print(
-            f"Epoch {epoch:02d}/{EPOCHS} | "
-            f"train {train_loss:.4f} nats ({bits_per_char(train_loss):.3f} bits/char) | "
-            f"val {val_loss:.4f} nats ({bits_per_char(val_loss):.3f} bits/char)" )
+        for epoch in range(1, EPOCHS + 1):
+            train_loss = run_epoch(model, train_loader, criterion, device, optimizer)
+            val_loss = run_epoch(model, val_loader, criterion, device)
+            is_best = val_loss < best_val_loss
 
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            torch.save(
-                {
-                    "model_state_dict": model.state_dict(),
-                    "chars": chars,
-                    "config": {
-                        "vocab_size": len(chars),
-                        "embed_dim": EMBED_DIM,
-                        "hidden_dim": HIDDEN_DIM,
-                        "num_layers": NUM_LAYERS,
+            print(
+                f"Epoch {epoch:02d}/{EPOCHS} | "
+                f"train {train_loss:.4f} nats ({bits_per_char(train_loss):.3f} bits/char) | "
+                f"val {val_loss:.4f} nats ({bits_per_char(val_loss):.3f} bits/char)" )
+
+            row = {
+                "epoch": epoch,
+                "train_loss_nats": train_loss,
+                "train_bpc": bits_per_char(train_loss),
+                "val_loss_nats": val_loss,
+                "val_bpc": bits_per_char(val_loss),
+                "is_best": is_best,
+            }
+            history.append(row)
+            log_writer.writerow(row)
+            log_file.flush()
+
+            if is_best:
+                best_val_loss = val_loss
+                torch.save(
+                    {
+                        "model_state_dict": model.state_dict(),
+                        "chars": chars,
+                        "config": {
+                            "vocab_size": len(chars),
+                            "embed_dim": EMBED_DIM,
+                            "hidden_dim": HIDDEN_DIM,
+                            "num_layers": NUM_LAYERS,
+                        },
+                        "val_loss": val_loss,
+                        "val_bits_per_char": bits_per_char(val_loss),
+                        "epoch": epoch,
                     },
-                    "val_loss": val_loss,
-                    "val_bits_per_char": bits_per_char(val_loss),
-                    "epoch": epoch,
-                },
-                CHECKPOINT_PATH, )
-            print(f"  Saved improved checkpoint to {CHECKPOINT_PATH}")
+                    CHECKPOINT_PATH, )
+                print(f"  Saved improved checkpoint to {CHECKPOINT_PATH}")
 
     print(f"\nBest validation: {bits_per_char(best_val_loss):.3f} bits/char")
-    print("Compare against baseline.py: gzip 2.945 bits/char, bzip2 2.165 bits/char")
+    print(f"Per-epoch log saved to {LOG_PATH}")
+
+    write_plot(history)
+    write_benchmark_table(bits_per_char(best_val_loss))
 
 
 if __name__ == "__main__":

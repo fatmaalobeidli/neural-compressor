@@ -40,8 +40,16 @@ neural-compressor/
 │   ├── frankenstein.txt
 │   ├── alice_in_wonderland.txt
 │   ├── corpus.txt
-│   ├── vocab.json
-│   └── character_gru.pt
+│   └── vocab.json
+├── checkpoints/
+│   └── char_gru.pt          # best model so far, by validation loss
+├── results/
+│   ├── baseline_metrics.json   # written by baseline.py
+│   ├── training_log.csv        # written by train.py, one row per epoch
+│   ├── benchmark_table.csv     # written by train.py: gzip vs bzip2 vs model
+│   └── plots/
+│       └── training_curve.png  # written by train.py
+├── experiments/              # reserved for the OOD generalization experiment (not started yet)
 ├── src/
 │   ├── download.py
 │   ├── tokenizer.py
@@ -51,9 +59,10 @@ neural-compressor/
 └── README.md
 ```
 
-Files inside `data/` are generated as the scripts are executed. The three book
-files are created by `download.py`; `corpus.txt` and `vocab.json` are created by
-`tokenizer.py`; and `character_gru.pt` is created by `train.py`.
+Files inside `data/`, `checkpoints/`, and `results/` are generated as the
+scripts are executed and are gitignored. The three book files are created by
+`download.py`; `corpus.txt` and `vocab.json` are created by `tokenizer.py`;
+`char_gru.pt` is created by `train.py`.
 
 ## What each Python file does
 
@@ -81,6 +90,8 @@ during training and when loading a saved model.
 
 Compresses `corpus.txt` with gzip and bzip2 and reports their sizes in bits per
 character. These results provide traditional compression baselines for the GRU.
+The numbers are also written to `results/baseline_metrics.json`, which
+`train.py` reads to build the combined benchmark table.
 
 ### `model.py`
 
@@ -107,7 +118,16 @@ Target:  ello
 
 The script trains the GRU with cross-entropy loss, reports training and
 validation BPC after every epoch, and saves the best checkpoint as
-`data/character_gru.pt`.
+`checkpoints/char_gru.pt`.
+
+It also writes, on every run:
+
+- `results/training_log.csv` — one row per epoch (train/val loss in nats and
+  bits/char, and whether that epoch improved the checkpoint).
+- `results/plots/training_curve.png` — train vs. validation BPC over epochs.
+- `results/benchmark_table.csv` — gzip, bzip2 (from
+  `results/baseline_metrics.json`, if `baseline.py` has been run first) and
+  the model's best validation BPC, side by side.
 
 It automatically uses a CUDA GPU when one is available; otherwise, it trains on
 the CPU.
@@ -116,6 +136,7 @@ the CPU.
 
 - Python 3.10 or newer
 - PyTorch
+- matplotlib (for the training curve plot)
 - An internet connection for the initial book download
 
 No external packages are needed for downloading, tokenizing, or measuring the
@@ -131,7 +152,7 @@ Create and activate a virtual environment from the project root.
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install torch
+pip install torch matplotlib
 ```
 
 ### macOS or Linux
@@ -140,7 +161,7 @@ pip install torch
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install torch
+pip install torch matplotlib
 ```
 
 For a platform-specific GPU installation, use the installation command provided
@@ -177,9 +198,11 @@ Example output:
 Corpus: 1400000 chars, 1410000 raw bytes
 gzip: 500000 bytes -> 2.857 bits/char
 bzip2: 410000 bytes -> 2.343 bits/char
+Saved baseline metrics to results/baseline_metrics.json
 ```
 
-The exact values depend on the downloaded and cleaned text.
+The exact values depend on the downloaded and cleaned text. Run this before
+`train.py` so the benchmark table below includes gzip/bzip2.
 
 ### 4. Train the neural model
 
@@ -191,9 +214,16 @@ Example training output:
 
 ```text
 Epoch 01/10 | train loss 2.1034, BPC 3.035 | validation loss 1.8521, BPC 2.672
+...
+Best validation: 2.371 bits/char
+Per-epoch log saved to results/training_log.csv
+Saved training curve to results/plots/training_curve.png
+Saved benchmark table to results/benchmark_table.csv
 ```
 
-The checkpoint is updated whenever the validation loss improves.
+The checkpoint is updated whenever the validation loss improves. The most
+recent run (epoch 9/10) reached **2.371 bits/char** on held-out text, beating
+the gzip baseline (2.945) but not yet bzip2 (2.165).
 
 ## Understanding bits per character
 
@@ -225,11 +255,11 @@ The main settings can be changed near the top of `train.py`:
 ```python
 SEQUENCE_LENGTH = 128
 BATCH_SIZE = 64
-EMBEDDING_DIM = 128
+EMBED_DIM = 128
 HIDDEN_DIM = 256
-NUM_LAYERS = 2
-DROPOUT = 0.2
+NUM_LAYERS = 1
 LEARNING_RATE = 3e-3
+GRAD_CLIP = 1.0
 EPOCHS = 10
 VALIDATION_FRACTION = 0.1
 ```
@@ -239,7 +269,7 @@ more memory and computation and may overfit a small corpus.
 
 ## Saved checkpoint
 
-The saved `character_gru.pt` checkpoint contains:
+The saved `checkpoints/char_gru.pt` checkpoint contains:
 
 - The model's learned parameters
 - The character vocabulary
@@ -268,7 +298,6 @@ have exactly the same meanings when the model is loaded again.
 - Evaluate on a completely separate, unseen book.
 - Compare GRU and LSTM architectures under the same training settings.
 - Add text generation to inspect what the model has learned.
-- Record training results in a CSV file and plot BPC over time.
 - Experiment with model size, sequence length, learning rate, and dropout.
 
 ## Data source
