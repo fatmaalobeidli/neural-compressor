@@ -1,8 +1,11 @@
 """
-Character-level tokenizer for the neural compressor project. 
+Character-level tokenizer for the neural compressor project. Strips the Gutenberg
+boilerplate from each book and concatenates then into data/corpus.txt
 
 Reads 3 text files in data/, builds a vocabulary of unique characters,
 and provides encode/decode functions between text and lists of integers.
+
+Saved to data/vocab.json
 
 To run:
     python src/tokenizer.py

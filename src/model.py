@@ -1,6 +1,8 @@
 """
 Character-level language model for the neural compressor project.
 
+Defines CharGRU: embedding layers -> single-layer GRU -> linear output layer.
+
 Predicts a probability distribution over the next character given
 a sequence of preceding characters. Trained with cross-entropy loss,
 which is directly interpretable as bits-per-character (see train.py).
