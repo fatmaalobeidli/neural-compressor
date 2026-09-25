@@ -6,17 +6,14 @@ loss can be plotted against epoch number), tracks loss in both nats (native
 to CrossEntropyLoss) and bits/char (comparable to the gzip/bzip2 numbers
 from baseline.py).
 
-Writes per-epoch metrics to results/training_log.csv, a loss curve plot to
-results/plots/training_curve.png, and (if results/baseline_metrics.json
-exists, i.e. baseline.py has already been run) a combined
-results/benchmark_table.csv comparing gzip, bzip2, and the trained model.
+Writes per-epoch metrics and a training curve. Actual compressed-file
+comparisons are produced separately by benchmark.py.
 
 Run from the project root:
     python src/train.py
 """
 
 import csv
-import json
 import math
 import os
 import random
@@ -49,8 +46,6 @@ CHECKPOINT_PATH = os.path.join(CHECKPOINT_DIR, "char_gru.pt")
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 LOG_PATH = os.path.join(RESULTS_DIR, "training_log.csv")
 PLOT_PATH = os.path.join(RESULTS_DIR, "plots", "training_curve.png")
-BENCHMARK_PATH = os.path.join(RESULTS_DIR, "benchmark_table.csv")
-BASELINE_METRICS_PATH = os.path.join(RESULTS_DIR, "baseline_metrics.json")
 
 
 class CharacterDataset(Dataset):
@@ -143,28 +138,6 @@ def write_plot(history: list[dict]) -> None:
     print(f"Saved training curve to {PLOT_PATH}")
 
 
-def write_benchmark_table(best_val_bpc: float) -> None:
-    """Combine gzip/bzip2 numbers from baseline.py (if available) with the
-    model's best validation BPC into results/benchmark_table.csv."""
-    rows = [{"method": "neural_gru (val)", "bits_per_char": best_val_bpc}]
-
-    if os.path.exists(BASELINE_METRICS_PATH):
-        with open(BASELINE_METRICS_PATH, encoding="utf-8") as f:
-            baseline = json.load(f)
-        rows.insert(0, {"method": "bzip2", "bits_per_char": baseline["bzip2_bpc"]})
-        rows.insert(0, {"method": "gzip", "bits_per_char": baseline["gzip_bpc"]})
-    else:
-        print(
-            f"Warning: {BASELINE_METRICS_PATH} not found - run baseline.py first "
-            "to include gzip/bzip2 in the benchmark table."
-        )
-
-    with open(BENCHMARK_PATH, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["method", "bits_per_char"])
-        writer.writeheader()
-        writer.writerows(rows)
-    print(f"Saved benchmark table to {BENCHMARK_PATH}")
-
 
 def main() -> None:
     set_seed(SEED)
@@ -253,7 +226,7 @@ def main() -> None:
     print(f"Per-epoch log saved to {LOG_PATH}")
 
     write_plot(history)
-    write_benchmark_table(bits_per_char(best_val_loss))
+    print("Run python src/benchmark.py for a same-sample file-size comparison.")
 
 
 if __name__ == "__main__":

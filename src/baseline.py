@@ -2,8 +2,8 @@
 Computes gzip/bz2 baseline compression rates (bits per character)
 for the corpus produced in tokenizer.py
 
-Saves the results to results/baseline_metrics.json so train.py can pick
-them up and include them in the combined benchmark table.
+Saves the results to results/baseline_metrics.json as descriptive full-corpus statistics. Use benchmark.py for same-sample
+comparisons with the neural compressor.
 
 To run: 
     python src/baseline.py
@@ -33,7 +33,7 @@ def main():
     raw_bytes = text.encode("utf-8")
     n_chars = len(text)
 
-    gzip_compressed = gzip.compress(raw_bytes, compresslevel=9)
+    gzip_compressed = gzip.compress(raw_bytes, compresslevel=9, mtime=0)
     bz2_compressed = bz2.compress(raw_bytes, compresslevel=9)
 
     gzip_bpc = bits_per_char(gzip_compressed, n_chars)

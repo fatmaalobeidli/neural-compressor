@@ -15,8 +15,8 @@ long the input is.
 
 Works with any alphabet and any distribution: static (see
 StaticFrequencyModel below, used for the self-tests) or one that changes
-every symbol, like a language model's prediction (see compress.py /
-decompress.py, where the model is wired in).
+every symbol, like a language model's prediction (see lm_coder.py, where the model is
+wired in).
 
 Run this file directly for its self-tests:
     python src/arithmetic_coder.py
@@ -173,9 +173,8 @@ class StaticFrequencyModel:
 
     Used here to unit-test the coder itself - both with a uniform
     distribution and with a skewed one - independent of any language
-    model. compress.py/decompress.py use a different, per-step model built
-    from the trained CharGRU's predicted probabilities instead of this
-    one, but talk to the same ArithmeticEncoder/ArithmeticDecoder.
+    model. lm_coder.py uses a per-step table built from the trained
+    CharGRU's predictions instead, with the same encoder/decoder.
     """
 
     def __init__(self, freqs: dict[str, int]) -> None:

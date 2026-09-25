@@ -1,0 +1,21 @@
+{
+  "num_chars": 129266,
+  "raw_bytes": 135435,
+  "compressed_bytes": 37909,
+  "payload_bytes": 37650,
+  "metadata_bytes": 259,
+  "bits_per_char": 2.346108025312147,
+  "quantized_model_bits": 301195.6291179938,
+  "escaped_chars": 0,
+  "checkpoint_sha256": "fbbdef9740eff8cca3f4e74329ff7c670dc24d98f58c4a464d7bd6bf69702d1d",
+  "input_sha256": "63d01aef6930b22934141dd1defefc0043283bb75d8c3db6ba768dd044d7ab1a",
+  "checkpoint_bytes": 1339486,
+  "model_storage_included": false,
+  "byte_roundtrip_verified": true,
+  "python_version": "3.14.7",
+  "torch_version": "2.14.0+cpu",
+  "neural_bits_per_char_with_checkpoint": 85.24407036653103,
+  "source": "C:\\Users\\fatmaa\\OneDrive\\Desktop\\UNIGE\\neural-compressor\\data\\corpus.txt",
+  "start_character": 1163386,
+  "sample_kind": "validation (used for checkpoint selection)"
+}

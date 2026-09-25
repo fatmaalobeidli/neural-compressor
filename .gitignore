@@ -5,3 +5,6 @@ __pycache__/
 *.pth
 .ipynb_checkpoints/
 *.bin
+
+.venv/
+*.nlc
