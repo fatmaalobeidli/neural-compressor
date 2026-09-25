@@ -26,7 +26,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from model import CharGRU
-from tokenizer import load_vocab, CORPUS_PATH
+from tokenizer import load_vocab, TRAIN_PATH, VAL_PATH
 
 # hyperparameters
 SEED = 42
@@ -38,7 +38,6 @@ NUM_LAYERS = 1
 LEARNING_RATE = 3e-3
 GRAD_CLIP = 1.0
 EPOCHS = 10
-VALIDATION_FRACTION = 0.1
 
 CHECKPOINT_DIR = os.path.join(os.path.dirname(__file__), "..", "checkpoints")
 CHECKPOINT_PATH = os.path.join(CHECKPOINT_DIR, "char_gru.pt")
@@ -146,12 +145,11 @@ def main() -> None:
     os.makedirs(os.path.dirname(PLOT_PATH), exist_ok=True)
 
     chars, stoi, _ = load_vocab()
-    with open(CORPUS_PATH, encoding="utf-8") as f:
-        text = f.read()
-    encoded = [stoi[ch] for ch in text]
-
-    split = int(len(encoded) * (1.0 - VALIDATION_FRACTION))
-    train_ids, val_ids = encoded[:split], encoded[split:]
+    # train/val split is done per book in tokenizer.py
+    with open(TRAIN_PATH, encoding="utf-8") as f:
+        train_ids = [stoi[ch] for ch in f.read()]
+    with open(VAL_PATH, encoding="utf-8") as f:
+        val_ids = [stoi[ch] for ch in f.read()]
 
     train_dataset = CharacterDataset(train_ids, SEQUENCE_LENGTH)
     val_dataset = CharacterDataset(val_ids, SEQUENCE_LENGTH)
@@ -171,7 +169,7 @@ def main() -> None:
     history = []
 
     print(f"Device: {device}")
-    print(f"Corpus: {len(text):,} characters | Vocabulary: {len(chars)}")
+    print(f"Vocabulary: {len(chars)}")
     print(f"Training: {len(train_ids):,} | Validation: {len(val_ids):,}")
 
     with open(LOG_PATH, "w", newline="", encoding="utf-8") as log_file:

@@ -13,15 +13,18 @@ model's cross-entropy on the text.
 
 Trained on three Project Gutenberg books (*Pride and Prejudice*,
 *Frankenstein*, *Alice's Adventures in Wonderland*, 1,292,652 characters,
-97 distinct characters). All three methods compress the same 129,266
-characters from the validation split, and all three decompress to exactly
-the original bytes.
+97 distinct characters). The last 10% of each book is held out for
+validation. All three methods compress the same 129,270 validation
+characters, and all three decompress to exactly the original bytes.
 
 | Method | Compressed size (bytes) | Bits per character |
 |---|---:|---:|
-| gzip (level 9) | 47,843 | 2.961 |
-| bzip2 (level 9) | 38,505 | 2.383 |
-| **Neural (GRU + arithmetic coding)** | **37,909** | **2.346** |
+| gzip (level 9) | 50,415 | 3.120 |
+| bzip2 (level 9) | 41,573 | 2.573 |
+| **Neural (GRU + arithmetic coding)** | **29,729** | **1.840** |
+
+The neural compressor produces files 41% smaller than gzip and 28% smaller
+than bzip2 on this text.
 
 ![Compression comparison](results/plots/compression_comparison.png)
 
@@ -29,8 +32,8 @@ the original bytes.
 
 **Shannon's theorem in practice.** The information content of the sample under
 the model (the sum of -log2 p over every character, using the exact
-probabilities the coder sees) is 301,195.6 bits. The arithmetic coder
-produced 301,200 bits, only 4.4 bits more for the whole sample.
+probabilities the coder sees) is 235,755.6 bits. The arithmetic coder
+produced 235,760 bits, only 4 bits more for the whole sample.
 The remaining 259 bytes of the file are the header and checksums.
 
 **Caveats**
@@ -38,14 +41,9 @@ The remaining 259 bytes of the file are the header and checksums.
 - The model (about 334k parameters, 1.3 MB) is not counted in the file size.
   That is the usual setup when both sides already share the model. Counting
   it would make a file this size much bigger than gzip's output.
-- The validation split is the last 10% of the corpus, which is almost
-  entirely *Alice*. The model mostly trained on the other two books, so this
-  is closer to a cross-book test than a standard held-out split. That
-  largely explains the gap between training (1.76 bits/char) and validation
-  (2.37 bits/char).
 - The same split was used to pick the best epoch, so it is not a fully
   untouched test set.
-- Speed: about 8,000 characters per second in pure Python, compared to
+- Speed: a few thousand characters per second in pure Python, compared to
   milliseconds for gzip and bzip2.
 
 ## How it works
@@ -80,7 +78,7 @@ Full pipeline:
 
 ```powershell
 python src/download.py            # download the three books
-python src/tokenizer.py           # clean them, build data/corpus.txt and data/vocab.json
+python src/tokenizer.py           # clean them, build the corpus, train/val split and vocabulary
 python src/baseline.py            # gzip/bzip2 on the full corpus
 python src/train.py               # train, writes checkpoints/char_gru.pt
 python src/benchmark.py           # results table and plot above
@@ -121,7 +119,7 @@ if you need to read older files.
 
 ```text
 neural-compressor/
-├── data/                  books, cleaned corpus, vocabulary
+├── data/                  books, corpus, train.txt, val.txt, vocab.json
 ├── checkpoints/           trained model
 ├── docs/FORMAT.md         .nlc file format
 ├── experiments/           out-of-distribution experiment (in progress)
@@ -152,6 +150,4 @@ neural-compressor/
 - Out-of-distribution experiment: compress text from other domains
   (another language, source code, modern news) with the same model and
   measure how much worse it gets.
-- Hold out the end of each book instead of the end of the corpus, for a
-  cleaner in-domain result.
 - Full writeup of the theory and results.

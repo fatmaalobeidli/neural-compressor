@@ -13,7 +13,7 @@ import torch
 
 from file_format import encode_file, decode_file, read_utf8
 from lm_coder import CHECKPOINT_PATH, load_model
-from tokenizer import CORPUS_PATH
+from tokenizer import VAL_PATH
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -56,22 +56,20 @@ def benchmark(raw, checkpoint=CHECKPOINT_PATH):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--in-path", help="custom UTF-8 sample; default: corpus validation section")
+    parser.add_argument("--in-path", help="UTF-8 file to compress; default: data/val.txt")
     parser.add_argument("--chars", type=int, help="optional prefix length within the selected sample")
     parser.add_argument("--checkpoint", default=CHECKPOINT_PATH)
     parser.add_argument("--out-dir", default=str(ROOT / "results"))
     args = parser.parse_args()
     if args.chars is not None and args.chars <= 0:
         parser.error("--chars must be positive")
-    path = Path(args.in_path or CORPUS_PATH)
-    text = read_utf8(path.read_bytes())
-    start = 0 if args.in_path else int(len(text) * 0.9)
-    selected = text[start:]
+    path = Path(args.in_path or VAL_PATH)
+    selected = read_utf8(path.read_bytes())
     if args.chars is not None:
         selected = selected[:args.chars]
     rows, metrics = benchmark(selected.encode("utf-8"), args.checkpoint)
-    metrics.update(source=str(path.resolve()), start_character=start,
-                   sample_kind="custom" if args.in_path else "validation (used for checkpoint selection)")
+    metrics.update(source=path.name,
+                   sample_kind="custom" if args.in_path else "validation (last 10% of each book, used for checkpoint selection)")
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     with (out / "benchmark_table.csv").open("w", encoding="utf-8", newline="") as f:
