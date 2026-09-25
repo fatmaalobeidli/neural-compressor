@@ -32,10 +32,9 @@ HALF = FULL >> 1
 QUARTER = FULL >> 2
 THREE_QUARTER = 3 * QUARTER
 
-# The cumulative frequency total must stay well below FULL, or narrowing
-# [low, high] by 1/total can lose so much precision that some symbol gets
-# zero width and becomes unencodable. Keeping total < QUARTER is the
-# standard, well-tested bound for this algorithm at this precision.
+# the frequency total has to stay well below FULL, otherwise a symbol can end
+# up with a zero-width interval and can't be encoded. total <= QUARTER is the
+# usual limit for this algorithm (Witten, Neal, Cleary).
 MAX_TOTAL = QUARTER
 
 
@@ -136,9 +135,8 @@ class ArithmeticDecoder:
 
     def get_cum_freq(self, total: int) -> int:
         """Where `value` currently falls inside [low, high], rescaled to
-        [0, total). Call this BEFORE decode_symbol to find out which
-        symbol was encoded (via the model's cumulative table), then call
-        decode_symbol with that symbol's own (cum_low, cum_high, total)."""
+        [0, total). Call this first to find out which symbol was encoded,
+        then call decode_symbol with that symbol's range."""
         span = self.high - self.low + 1
         scaled = ((self.value - self.low + 1) * total - 1) // span
         return min(total - 1, scaled)
