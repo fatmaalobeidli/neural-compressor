@@ -46,6 +46,49 @@ The remaining 259 bytes of the file are the header and checksums.
 - Speed: a few thousand characters per second in pure Python, compared to
   milliseconds for gzip and bzip2.
 
+## Same model on other texts
+
+How much does the result depend on the training data? The same model
+compresses 50,000 characters from five texts, ordered from close to far
+from the training books (`experiments/ood_generalization.py`).
+
+| Text | gzip | bzip2 | Neural | Model only | Unknown characters |
+|---|---:|---:|---:|---:|---:|
+| Held-out part of the training books | 3.183 | 2.664 | **1.735** | 1.694 | 0 |
+| *Sense and Sensibility* (unseen Austen book) | 3.081 | 2.619 | **1.900** | 1.857 | 1 |
+| Modern English (Wikipedia) | 2.935 | **2.580** | 4.531 | 3.331 | 592 |
+| German (Kafka, *Die Verwandlung*) | 3.253 | **2.748** | 9.299 | 6.266 | 1,120 |
+| Python code (`argparse.py`) | 1.769 | **1.586** | 7.090 | 3.868 | 1,688 |
+
+All values in bits per character. "Model only" is the cost of the model's
+predictions, without the unknown characters stored in the header.
+
+![Out-of-distribution comparison](results/plots/ood_comparison.png)
+
+- gzip and bzip2 stay between 2.6 and 3.3 bits/char on every prose text
+  (code is easier for them because it repeats a lot). The neural
+  compressor goes from 1.74 to 9.30.
+- On an unseen book by the same author it only gets 0.17 bits/char worse
+  and still beats bzip2 clearly, so the model learned the style and not
+  just the three books.
+- On modern English the model alone already needs 3.33 bits/char, worse
+  than bzip2 before any unknown characters are counted.
+- On German the model needs 6.27 bits/char. Guessing uniformly among the 97
+  characters would cost log2(97) = 6.6 bits, so the model has almost
+  nothing to go on.
+- The loss has two separate causes. The model's predictions don't fit the
+  text ("Model only"), and characters outside the 97-character vocabulary
+  (ä, ö, ü, ß, ", =, # and so on) cost 12 to 17 bytes each in the header,
+  which adds 1.2 to 3.2 bits/char. A byte-level vocabulary would remove the
+  second problem but not the first.
+
+The compression rate is a property of the text *and* the model: the
+same text is cheap for a model that expects it and expensive for one that
+doesn't.
+
+The Wikipedia text is from the article "Large language model"
+([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)).
+
 ## How it works
 
 1. **Model** (`src/model.py`): embedding (128), 1-layer GRU (256), linear
@@ -82,6 +125,7 @@ python src/tokenizer.py           # clean them, build the corpus, train/val spli
 python src/baseline.py            # gzip/bzip2 on the full corpus
 python src/train.py               # train, writes checkpoints/char_gru.pt
 python src/benchmark.py           # results table and plot above
+python experiments/ood_generalization.py   # same model on other kinds of text
 ```
 
 Tests:
@@ -122,7 +166,7 @@ neural-compressor/
 ├── data/                  books, corpus, train.txt, val.txt, vocab.json
 ├── checkpoints/           trained model
 ├── docs/FORMAT.md         .nlc file format
-├── experiments/           out-of-distribution experiment (in progress)
+├── experiments/           out-of-distribution experiment
 ├── results/
 │   ├── baseline_metrics.json
 │   ├── training_log.csv
@@ -147,7 +191,4 @@ neural-compressor/
 
 ## Next steps
 
-- Out-of-distribution experiment: compress text from other domains
-  (another language, source code, modern news) with the same model and
-  measure how much worse it gets.
 - Full writeup of the theory and results.
