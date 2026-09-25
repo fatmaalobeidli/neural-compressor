@@ -9,6 +9,8 @@ The project compares this against gzip and bzip2 and checks Shannon's source
 coding theorem in practice: the compressed size should be almost exactly the
 model's cross-entropy on the text.
 
+The full report with the theory and discussion is in [writeup.md](writeup.md).
+
 ## Results
 
 Trained on three Project Gutenberg books (*Pride and Prejudice*,
@@ -186,9 +188,6 @@ neural-compressor/
 │   ├── decompress.py
 │   └── benchmark.py
 ├── tests/test_pipeline.py
-└── requirements.txt
+├── requirements.txt
+└── writeup.md             full report
 ```
-
-## Next steps
-
-- Full writeup of the theory and results.
