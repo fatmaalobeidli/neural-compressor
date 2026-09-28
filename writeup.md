@@ -46,7 +46,7 @@ For text, predictions depend on the preceding characters. The ideal coding
 cost of one observed sequence is therefore
 
 ```math
-L = -\sum_{t=1}^{N} \log_2 q(x_t \mid x_{<t})
+L = -\sum_{t=1}^{N} \log_2 q(x_t \mid x_{\lt t})
 ```
 
 Here, $L/N$ is the model's average log loss on that sequence, measured in
@@ -64,7 +64,7 @@ The network is trained with cross-entropy loss, which PyTorch computes with
 the natural log:
 
 ```math
-\text{loss} = -\frac{1}{N} \sum_t \ln q(x_t \mid x_{<t})
+\text{loss} = -\frac{1}{N} \sum_t \ln q(x_t \mid x_{\lt t})
 ```
 
 Dividing by $\ln 2$ gives bits per character, which is exactly $L/N$ from
@@ -82,13 +82,13 @@ keeps the one belonging to the actual character.
 With exact arithmetic, the final interval has width
 
 ```math
-W = \prod_{t=1}^{N} q(x_t \mid x_{<t}),
+W = \prod_{t=1}^{N} q(x_t \mid x_{\lt t}),
 ```
 
 so its ideal information content is
 
 ```math
--\log_2 W = -\sum_{t=1}^{N} \log_2 q(x_t \mid x_{<t}) = L.
+-\log_2 W = -\sum_{t=1}^{N} \log_2 q(x_t \mid x_{\lt t}) = L.
 ```
 
 With a suitable termination rule, ideal arithmetic coding can represent the
@@ -185,7 +185,7 @@ than bzip2.
 ### 4.2 The source coding theorem in practice
 
 Using the exact integer frequencies the coder received, the ideal code
-length of the sample is $`\sum_t -\log_2 q(x_t \mid x_{<t}) = 235{,}755.6`$
+length of the sample is $`\sum_t -\log_2 q(x_t \mid x_{\lt t}) = 235{,}755.6`$
 bits. The arithmetic code, including byte padding, is 235,760 bits long,
 so the coder adds only 4.4 bits for the whole text. This is within what
 section 2.4 predicts: under 2 bits for the ideal code, up to 7 bits of
