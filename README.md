@@ -191,3 +191,13 @@ neural-compressor/
 ├── requirements.txt
 └── writeup.md             full report
 ```
+
+## License
+
+The code in this repository is licensed under the [MIT License](LICENSE).
+
+The texts in `data/` are not covered by this license:
+
+- Project Gutenberg books (*Pride and Prejudice*, *Frankenstein*, *Alice's Adventures in Wonderland*, *Sense and Sensibility*, *Die Verwandlung*): public domain in the US, from [Project Gutenberg](https://www.gutenberg.org/).
+- `data/ood/wikipedia.txt`: from the Wikipedia article "Large language model", [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- `data/ood/python_code.txt`: `argparse.py` from the CPython standard library, [PSF License](https://docs.python.org/3/license.html).
