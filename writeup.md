@@ -18,7 +18,9 @@ training data.
 
 For a source that emits symbols $x$ with probability $p(x)$, the entropy is
 
-$$H(p) = -\sum_x p(x) \log_2 p(x)$$
+```math
+H(p) = -\sum_x p(x) \log_2 p(x)
+```
 
 Shannon's source coding theorem says that no lossless code can use fewer
 than $H(p)$ bits per symbol on average, and that codes exist that get
@@ -32,7 +34,9 @@ model $q$ instead. A symbol that the model assigns probability $q(x)$ has
 an ideal coding cost of $-\log_2 q(x)$ bits. If the symbols come from $p$,
 the expected cost is the cross-entropy:
 
-$$H(p, q) = -\sum_x p(x) \log_2 q(x) = H(p) + D_{KL}(p \,\|\, q)$$
+```math
+H(p, q) = -\sum_x p(x) \log_2 q(x) = H(p) + D_{KL}(p \,\|\, q)
+```
 
 The KL divergence is non-negative, so using $q$ cannot improve on the true
 source entropy in expectation. It measures the extra expected bits caused
@@ -41,7 +45,9 @@ by model mismatch. When $q = p$, this extra cost is zero.
 For text, predictions depend on the preceding characters. The ideal coding
 cost of one observed sequence is therefore
 
-$$L = -\sum_{t=1}^{N} \log_2 q(x_t \mid x_{<t})$$
+```math
+L = -\sum_{t=1}^{N} \log_2 q(x_t \mid x_{<t})
+```
 
 Here, $L/N$ is the model's average log loss on that sequence, measured in
 bits per character. The same entropy-plus-KL relationship applies to the
@@ -57,7 +63,9 @@ a measurement of KL divergence.
 The network is trained with cross-entropy loss, which PyTorch computes with
 the natural log:
 
-$$\text{loss} = -\frac{1}{N} \sum_t \ln q(x_t \mid x_{<t})$$
+```math
+\text{loss} = -\frac{1}{N} \sum_t \ln q(x_t \mid x_{<t})
+```
 
 Dividing by $\ln 2$ gives bits per character, which is exactly $L/N$ from
 above. Minimizing the training loss therefore means minimizing the ideal
@@ -73,11 +81,15 @@ keeps the one belonging to the actual character.
 
 With exact arithmetic, the final interval has width
 
-$$W = \prod_{t=1}^{N} q(x_t \mid x_{<t}),$$
+```math
+W = \prod_{t=1}^{N} q(x_t \mid x_{<t}),
+```
 
 so its ideal information content is
 
-$$-\log_2 W = -\sum_{t=1}^{N} \log_2 q(x_t \mid x_{<t}) = L.$$
+```math
+-\log_2 W = -\sum_{t=1}^{N} \log_2 q(x_t \mid x_{<t}) = L.
+```
 
 With a suitable termination rule, ideal arithmetic coding can represent the
 sequence using fewer than $L + 2$ bits. This is a bound for the ideal code,
@@ -173,7 +185,7 @@ than bzip2.
 ### 4.2 The source coding theorem in practice
 
 Using the exact integer frequencies the coder received, the ideal code
-length of the sample is $\sum_t -\log_2 q(x_t \mid x_{<t}) = 235{,}755.6$
+length of the sample is $`\sum_t -\log_2 q(x_t \mid x_{<t}) = 235{,}755.6`$
 bits. The arithmetic code, including byte padding, is 235,760 bits long,
 so the coder adds only 4.4 bits for the whole text. This is within what
 section 2.4 predicts: under 2 bits for the ideal code, up to 7 bits of
