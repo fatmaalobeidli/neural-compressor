@@ -90,6 +90,8 @@ doesn't.
 
 The Wikipedia text is from the article "Large language model"
 ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)).
+The Python code sample is `argparse.py` from the CPython standard library
+([PSF License](https://docs.python.org/3/license.html)).
 
 ## How it works
 
